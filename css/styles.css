@@ -382,8 +382,15 @@ html[data-theme="light"] .bg-shimmer { opacity:.25; }
 }
 
 /* Project card interactive styling */
-.project-card { transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateZ(0); transform-style: preserve-3d; will-change: transform; transition: transform .18s ease, box-shadow .25s ease, border-color .2s ease; }
-.project-card:hover { border-color: color-mix(in oklab, var(--accent) 55%, var(--border)); box-shadow: 0 18px 40px rgba(0,0,0,.35); }
+.project-card { transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateZ(0); transform-style: preserve-3d; will-change: transform, box-shadow, background-color, filter; transition: transform .18s ease, box-shadow .25s ease, border-color .2s ease, background-color .25s ease, filter .25s ease; }
+.project-card:hover {
+  border-color: color-mix(in oklab, var(--accent) 70%, var(--border));
+  background: color-mix(in oklab, var(--bg) 80%, var(--bg-elev));
+  filter: brightness(1.05) saturate(1.06);
+  box-shadow:
+    0 18px 40px rgba(0,0,0,.35),
+    0 0 24px color-mix(in oklab, var(--accent) 22%, transparent);
+}
 
 @media (prefers-reduced-motion: no-preference) {
   /* glossy sweep on hover */
