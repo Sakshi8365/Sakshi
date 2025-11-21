@@ -181,6 +181,31 @@
       grid.addEventListener('pointermove', onMove, { passive: true });
       grid.addEventListener('pointerleave', onLeave, { passive: true });
     } catch (_) { }
+
+    // Touch activation for hover-like effects on coarse pointers (mobile/tablet)
+    try {
+      const isCoarse = window.matchMedia('(pointer: coarse)').matches;
+      if (isCoarse) {
+        let activeCard = null;
+        const clearActive = () => {
+          if (activeCard) { activeCard.classList.remove('touch-active'); activeCard = null; }
+        };
+        grid.addEventListener('pointerdown', (e) => {
+          const card = e.target.closest('.project-card');
+          if (!card) return;
+          if (activeCard && activeCard !== card) activeCard.classList.remove('touch-active');
+          activeCard = card;
+          card.classList.add('touch-active');
+        }, { passive: true });
+        // Dismiss on tapping outside or scrolling
+        document.addEventListener('pointerdown', (e) => {
+          if (!activeCard) return;
+          const card = e.target.closest('.project-card');
+          if (!card || !grid.contains(card)) clearActive();
+        }, { passive: true });
+        window.addEventListener('scroll', () => clearActive(), { passive: true });
+      }
+    } catch (_) { }
   }
 
   // Re-run effects after projects load by listening to DOM changes or call after rendering

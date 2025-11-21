@@ -390,9 +390,11 @@ html[data-theme="light"] .bg-shimmer { opacity:.25; }
     radial-gradient(320px 220px at var(--mx, 50%) var(--my, 50%), color-mix(in oklab, var(--accent) 36%, transparent) 0%, transparent 72%);
   mix-blend-mode: screen; transition: opacity .16s ease; will-change: opacity, background-position;
 }
-.project-card:hover::before { opacity: .22; }
+.project-card:hover::before,
+.project-card.touch-active::before { opacity: .22; }
 html[data-theme="light"] .project-card::before { mix-blend-mode: overlay; }
-.project-card:hover {
+.project-card:hover,
+.project-card.touch-active {
   --scale: 1.12;
   --ty: -10px;
   border-color: color-mix(in oklab, var(--accent) 80%, var(--border));
@@ -411,7 +413,8 @@ html[data-theme="light"] .project-card::before { mix-blend-mode: overlay; }
     background-size: 200% 100%; background-position: -120% 0;
     opacity: 0; transition: opacity .2s ease;
   }
-  .project-card:hover::after { opacity: .12; animation: cardSheen 1.05s ease; }
+  .project-card:hover::after,
+  .project-card.touch-active::after { opacity: .12; animation: cardSheen 1.05s ease; }
   @keyframes cardSheen { to { background-position: 120% 0; } }
 }
 
