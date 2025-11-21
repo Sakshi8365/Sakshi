@@ -149,6 +149,9 @@
           raf = requestAnimationFrame(() => {
             card.style.setProperty('--rx', rx + 'deg');
             card.style.setProperty('--ry', ry + 'deg');
+            // cursor-following hotspot for card lighting
+            card.style.setProperty('--mx', (nx * 100).toFixed(2) + '%');
+            card.style.setProperty('--my', (ny * 100).toFixed(2) + '%');
             raf = null;
           });
         }
@@ -158,6 +161,8 @@
         if (!card) return;
         card.style.setProperty('--rx', '0deg');
         card.style.setProperty('--ry', '0deg');
+        card.style.setProperty('--mx', '50%');
+        card.style.setProperty('--my', '50%');
       };
 
       const onMove = (e) => {
