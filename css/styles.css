@@ -382,7 +382,7 @@ html[data-theme="light"] .bg-shimmer { opacity:.25; }
 }
 
 /* Project card interactive styling */
-.project-card { transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateZ(0); transform-style: preserve-3d; will-change: transform, box-shadow, background-color, filter; transition: transform .18s ease, box-shadow .25s ease, border-color .2s ease, background-color .25s ease, filter .25s ease; }
+.project-card { --scale: 1; transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) scale(var(--scale)) translateZ(0); transform-style: preserve-3d; will-change: transform, box-shadow, background-color, filter; transition: transform .25s cubic-bezier(.22,1,.36,1), box-shadow .28s ease, border-color .22s ease, background-color .28s ease, filter .28s ease; }
 .project-card::before {
   content: ""; position: absolute; inset: -1px; pointer-events: none; border-radius: inherit; opacity: 0;
   background-image:
@@ -393,6 +393,7 @@ html[data-theme="light"] .bg-shimmer { opacity:.25; }
 .project-card:hover::before { opacity: .22; }
 html[data-theme="light"] .project-card::before { mix-blend-mode: overlay; }
 .project-card:hover {
+  --scale: 1.045;
   border-color: color-mix(in oklab, var(--accent) 75%, var(--border));
   background: color-mix(in oklab, var(--bg) 78%, var(--bg-elev));
   filter: brightness(1.07) saturate(1.08);
