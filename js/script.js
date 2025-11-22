@@ -185,16 +185,13 @@
     // Touch activation for hover-like effects on coarse pointers (mobile/tablet)
     // Multi-card activation: each tap toggles its own active state; cards stay lit until retapped.
     try {
-      const isCoarse = window.matchMedia('(pointer: coarse)').matches;
-      if (isCoarse) {
-        grid.addEventListener('pointerdown', (e) => {
-          const card = e.target.closest('.project-card');
-          if (!card) return;
-          // Toggle activation on tap
-          card.classList.toggle('touch-active');
-        }, { passive: true });
-        // Optional: long press could be added later for additional actions.
-      }
+      // Allow pointer (click/tap) to toggle active state on any device so testing is immediate.
+      grid.addEventListener('pointerdown', (e) => {
+        const card = e.target.closest('.project-card');
+        if (!card) return;
+        // Toggle activation on pointer down (tap or click)
+        card.classList.toggle('touch-active');
+      }, { passive: true });
     } catch (_) { }
   }
 
