@@ -11,16 +11,16 @@
     "source": "https://github.com/Sakshi8365/NeRF-Neural-Radiance-Fields-for-3D-Scene-Reconstruction"
   },
   {
-    "title": " StreamForge",
-    "description": "A Real Time Crypto Data Pipeline",
-    "tech": ["Python", "Kafka/Redpanda", "Docker", "PostgreSQL"],
-    "source": "https://github.com/Sakshi8365/StreamForge"
-  },
-  {
     "title": "VisionX",
     "description": "A Real-Time Object Detection App",
     "tech": ["Python", "PyTorch", "YOLOv8", "OpenCV", "CLIP", "NumPy"],
     "source": "https://github.com/Sakshi8365/VisionX"
+  },
+  {
+    "title": " StreamForge",
+    "description": "A Real Time Crypto Data Pipeline",
+    "tech": ["Python", "Kafka/Redpanda", "Docker", "PostgreSQL"],
+    "source": "https://github.com/Sakshi8365/StreamForge"
   },
   {
     "title": "Toxicity-Detection-Discord-Bot",
