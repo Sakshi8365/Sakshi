@@ -11,8 +11,8 @@ A fast, responsive, and accessible personal portfolio. Built with plain HTML, CS
   - Swap the Resume link to your actual PDF or page.
 - data/projects.json
   - Add/update your projects. Fields: `title`, `description`, `tech` (array), optional `live`, optional `source`.
-- assets/favicon.svg
-  - Swap the letter or replace with your own favicon.
+- Favicon
+  - The favicon currently uses `assets/og-image.jpg` (see `<head>` in `index.html`). Replace that file or update the `<link rel="icon">` tag.
 - css/styles.css
   - Adjust colors, spacing, and typography via CSS variables.
 
