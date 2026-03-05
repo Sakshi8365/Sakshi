@@ -52,6 +52,22 @@
   const toggleBtn = $('#theme-toggle');
   if (toggleBtn) toggleBtn.addEventListener('click', toggleTheme);
 
+  // Performance mode: reduce expensive animated effects on low-power devices.
+  // (No UI toggle; this is an automatic, safe fallback.)
+  const perf = (() => {
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
+    const saveData = Boolean(navigator.connection && navigator.connection.saveData);
+    const deviceMemory = Number(navigator.deviceMemory || 0);
+    const cores = Number(navigator.hardwareConcurrency || 0);
+
+    // Heuristics tuned to avoid jank on mobile / low-end devices.
+    const low = coarsePointer || saveData || (deviceMemory && deviceMemory <= 4) || (cores && cores <= 4);
+    if (low) document.documentElement.setAttribute('data-perf', 'low');
+
+    return { reduceMotion, coarsePointer, saveData, deviceMemory, cores, low };
+  })();
+
   // Set default glow shape to a subtle 'aura'
   try { if (!document.documentElement.hasAttribute('data-glow-shape')) { document.documentElement.setAttribute('data-glow-shape', 'aura'); } } catch (_) { }
 
@@ -138,8 +154,8 @@
 
     // Subtle 3D tilt on hover (desktop, motion-allowed)
     try {
-      const isCoarse = window.matchMedia('(pointer: coarse)').matches;
-      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const isCoarse = perf.coarsePointer;
+      const reduce = perf.reduceMotion || perf.low;
       if (isCoarse || reduce) return;
 
       const maxTilt = 6; // degrees
@@ -297,9 +313,9 @@
 
   // Subtle interactive spotlight with eased motion, adaptive intensity/size, and idle fade (desktop only)
   try {
-    const isCoarse = window.matchMedia('(pointer: coarse)').matches;
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (!isCoarse) {
+    const isCoarse = perf.coarsePointer;
+    const reduce = perf.reduceMotion || perf.low;
+    if (!isCoarse && !perf.low) {
       const root = document.documentElement;
       // Current and target spot positions in %
       let x = 50, y = 50, tx = 50, ty = 50;
@@ -429,7 +445,10 @@
   // Subtle starfield / nebula effect (canvas), respects reduced motion
   (function initStarfield() {
     try {
-      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      // Skip on low-perf devices to avoid scroll jank.
+      if (perf.low) return;
+
+      const reduce = perf.reduceMotion;
       const canvas = document.createElement('canvas');
       canvas.className = 'starfield';
       canvas.setAttribute('aria-hidden', 'true');
@@ -532,9 +551,10 @@
   // GLIMMER: inject sparkles into .glimmer-layer
   (function initGlimmer() {
     try {
+      if (perf.low) return;
       const host = document.querySelector('.glimmer-layer');
       if (!host) return;
-      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const reduce = perf.reduceMotion;
       const count = reduce ? 40 : 85;
       const frag = document.createDocumentFragment();
       const w = host.offsetWidth || host.parentElement.offsetWidth || window.innerWidth;
@@ -564,9 +584,10 @@
   // Global glimmer layer sparkles
   (function initGlobalGlimmer() {
     try {
+      if (perf.low) return;
       const layer = document.querySelector('.bg-glimmer-layer');
       if (!layer) return;
-      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const reduce = perf.reduceMotion;
       const total = reduce ? 70 : 140;
       const frag = document.createDocumentFragment();
       for (let i = 0; i < total; i++) {

@@ -246,6 +246,26 @@ html[data-theme="light"] .starfield { opacity: .10; }
 .bg-effect-layers { position:fixed; inset:0; pointer-events:none; z-index:0; }
 .bg-effect-layers > * { position:absolute; inset:0; }
 
+/* Low-performance mode (set by JS via html[data-perf="low"]) */
+html[data-perf="low"] .bg-effect-layers { display: none; }
+html[data-perf="low"] .glimmer-layer { display: none; }
+html[data-perf="low"] .site-header { backdrop-filter: none; background: var(--bg); }
+html[data-perf="low"] body::before,
+html[data-perf="low"] body::after { content: none !important; }
+html[data-perf="low"][data-theme="dark"] body,
+html[data-perf="low"][data-theme="light"] body { background-attachment: scroll; }
+
+/* Mobile/coarse pointer: apply the same performance fallbacks immediately */
+@media (pointer: coarse) {
+  .bg-effect-layers { display: none; }
+  .glimmer-layer { display: none; }
+  .site-header { backdrop-filter: none; background: var(--bg); }
+  body::before,
+  body::after { content: none !important; }
+  html[data-theme="dark"] body,
+  html[data-theme="light"] body { background-attachment: scroll; }
+}
+
 /* SHIMMER (global): slow gradient hue drift */
 .bg-shimmer { background: linear-gradient(140deg, rgba(124,92,255,0.22), rgba(45,212,191,0.18), rgba(124,92,255,0.22)); mix-blend-mode: overlay; opacity:.32; }
 html[data-theme="light"] .bg-shimmer { opacity:.25; }
