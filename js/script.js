@@ -65,8 +65,14 @@
       if (!res.ok) throw new Error('Failed to load projects');
       const projects = await res.json();
       renderProjects(projects, grid);
+      // Cards start hidden via .proj-reveal; initialize reveal/effects only after
+      // the grid has been populated so projects reliably become visible.
+      initProjectEffects();
     } catch (err) {
-      grid.innerHTML = `<p style="color:var(--muted)">Couldn't load projects right now. Check back later or visit my <a href=\"https://github.com/\" target=\"_blank\" rel=\"noopener\">GitHub</a>.</p>`;
+      const openedFromFile = window.location && window.location.protocol === 'file:';
+      grid.innerHTML = openedFromFile
+        ? `<p style="color:var(--muted)">Projects can’t load when opening this page via <strong>file://</strong>. Run a local server (e.g. VS Code Live Server) or view the deployed site.</p>`
+        : `<p style="color:var(--muted)">Couldn't load projects right now. Check back later or visit my <a href=\"https://github.com/\" target=\"_blank\" rel=\"noopener\">GitHub</a>.</p>`;
       console.error(err);
     }
   }
@@ -195,10 +201,7 @@
     } catch (_) { }
   }
 
-  // Re-run effects after projects load by listening to DOM changes or call after rendering
-  document.addEventListener('DOMContentLoaded', () => initProjectEffects());
-  // Fallback: try again after a tick in case projects load later
-  setTimeout(initProjectEffects, 600);
+  // Effects are initialized right after project cards render in loadProjects().
 
   // Scroll spy for in-page nav (Home/About/Projects)
   function initScrollSpy() {
