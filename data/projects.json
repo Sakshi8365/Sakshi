@@ -1,4 +1,9 @@
 [ {
+    "title": "FocusBuddy",
+    "description": "Focus Buddy is an ADHD-focused, gamified productivity web app built with FastAPI.It combines mission-based focus sessions, ADHD support tools, and parent supervision features with PIN-protected reporting.",
+    "tech": ["FastAPI", "Python", "SQLAlchemy", "SQLite", "JavaScript"],
+    "source": "https://github.com/Sakshi8365/FocusBuddy"
+  },{
     "title": "Async Distributed Web Crawler",
     "description": "An asynchronous, distributed web crawler written in Python. Uses Redis for the frontier, Motor/MongoDB for page storage, and includes polite crawling (robots, rate limiting), retry logic, metrics and a static snapshot dashboard for monitoring. Packaged with Docker and a CLI for domain analytics and status dumps.",
     "tech": ["Python (asyncio, aiohttp)", "Redis", "MongoDB", "Docker", "GitHub Actions"],
@@ -17,29 +22,18 @@
     "source": "https://github.com/Sakshi8365/VisionX"
   },
   {
-    "title": " StreamForge",
-    "description": "A Real Time Crypto Data Pipeline",
-    "tech": ["Python", "Kafka/Redpanda", "Docker", "PostgreSQL"],
-    "source": "https://github.com/Sakshi8365/StreamForge"
+    "title": "Data-Masker-Smart-Data-Redactor",
+    "description": "Data Masker is a fast, configurable CLI that detects and masks PII",
+    "tech": ["Python", "Pandas", "Click", "PyYAML", "Regex", "ipaddress"],
+    "source": "https://github.com/Sakshi8365/Data-Masker-Smart-Data-Redactor"
   },
   {
     "title": "Toxicity-Detection-Discord-Bot",
     "description": "Real-time Discord toxicity detection bot using ML/NLP with configurable thresholds and admin controls for fast, accurate moderation.",
     "tech": ["Python", "Discord.py", "Scikit-learn", "TF-IDF", "Logistic Regression", "JSON Config"],
     "source": "https://github.com/Sakshi8365/Toxicity-Detection-Discord-Bot"
-  },
-  {
-    "title": "Proactive-Cloud-Monitoring-Dashboard",
-    "description": "Cloud cost and performance monitoring dashboard with CSV upload, analytics, and Dockerized full-stack setup (Next.js, FastAPI, TimescaleDB).",
-    "tech": ["Python", "FastAPI", "TimescaleDB", "Next.js (TypeScript)", "Docker", "Recharts"],
-    "source": "https://github.com/Sakshi8365/Proactive-Cloud-Monitoring-Dashboard"
-  },
-   {
-    "title": "Data-Masker-Smart-Data-Redactor",
-    "description": "Data Masker is a fast, configurable CLI that detects and masks PII",
-    "tech": ["Python", "Pandas", "Click", "PyYAML", "Regex", "ipaddress"],
-    "source": "https://github.com/Sakshi8365/Data-Masker-Smart-Data-Redactor"
   }
+ 
   
   
 

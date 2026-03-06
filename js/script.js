@@ -306,6 +306,342 @@
     tick();
   })();
 
+  // About canvas: particle lines from your photo (shape + original colors)
+  (function initPhotoParticleSilhouette() {
+    const canvas = document.querySelector('.photo-simulation');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d', { alpha: true });
+    if (!ctx) return;
+
+    const low = perf.low;
+    const reduce = perf.reduceMotion;
+    const maxDpr = low ? 1.25 : 2;
+    const alphaThreshold = 2; // keep almost all edge pixels
+    const boundsAlphaThreshold = 20; // stricter threshold for trimming transparent borders
+    const mattePurpleBase = { r: 224, g: 88, b: 255 };
+    const mattePurpleHighlight = { r: 255, g: 232, b: 255 };
+
+    const sourceEl = document.querySelector('.about-photo-source');
+    const sourceSrc = sourceEl ? (sourceEl.currentSrc || sourceEl.getAttribute('src') || '') : '';
+    const sourceImg = sourceSrc ? new Image() : null;
+    if (!sourceImg) return;
+    sourceImg.decoding = 'async';
+    sourceImg.src = sourceSrc;
+
+    const off = document.createElement('canvas');
+    const offCtx = off.getContext('2d', { alpha: true, willReadFrequently: true });
+    if (!offCtx) return;
+
+    let dpr = 1;
+    let raf = null;
+    let startedAt = 0;
+    let lastW = 0;
+    let lastH = 0;
+    let particles = [];
+    let sourceBounds = null;
+    let disturbance = 0;
+    const pointer = { x: -1000, y: -1000, active: false };
+
+    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+    const fitContain = (sw, sh, tw, th, fill = 1.03, yBias = 0.58) => {
+      const scale = Math.min((tw * fill) / sw, (th * fill) / sh);
+      const dw = sw * scale;
+      const dh = sh * scale;
+      return { dx: (tw - dw) * 0.5, dy: (th - dh) * yBias, dw, dh };
+    };
+
+    function getSourceBounds() {
+      if (sourceBounds) return sourceBounds;
+
+      const sw = sourceImg.naturalWidth || 0;
+      const sh = sourceImg.naturalHeight || 0;
+      if (!sw || !sh) {
+        sourceBounds = { sx: 0, sy: 0, sw: Math.max(1, sw), sh: Math.max(1, sh) };
+        return sourceBounds;
+      }
+
+      const probe = document.createElement('canvas');
+      const probeCtx = probe.getContext('2d', { alpha: true, willReadFrequently: true });
+      if (!probeCtx) {
+        sourceBounds = { sx: 0, sy: 0, sw, sh };
+        return sourceBounds;
+      }
+
+      probe.width = sw;
+      probe.height = sh;
+      probeCtx.clearRect(0, 0, sw, sh);
+      probeCtx.drawImage(sourceImg, 0, 0, sw, sh);
+
+      const px = probeCtx.getImageData(0, 0, sw, sh).data;
+      const rowCounts = new Uint32Array(sh);
+      const colCounts = new Uint32Array(sw);
+
+      for (let y = 0; y < sh; y++) {
+        for (let x = 0; x < sw; x++) {
+          const a = px[(y * sw + x) * 4 + 3];
+          if (a > boundsAlphaThreshold) {
+            rowCounts[y]++;
+            colCounts[x]++;
+          }
+        }
+      }
+
+      const minRowPixels = Math.max(1, Math.floor(sw * 0.01));
+      const minColPixels = Math.max(1, Math.floor(sh * 0.01));
+
+      let minY = 0;
+      while (minY < sh && rowCounts[minY] < minRowPixels) minY++;
+      let maxY = sh - 1;
+      while (maxY >= 0 && rowCounts[maxY] < minRowPixels) maxY--;
+
+      let minX = 0;
+      while (minX < sw && colCounts[minX] < minColPixels) minX++;
+      let maxX = sw - 1;
+      while (maxX >= 0 && colCounts[maxX] < minColPixels) maxX--;
+
+      if (maxX < minX || maxY < minY) {
+        sourceBounds = { sx: 0, sy: 0, sw, sh };
+      } else {
+        sourceBounds = {
+          sx: minX,
+          sy: minY,
+          sw: maxX - minX + 1,
+          sh: maxY - minY + 1
+        };
+      }
+      return sourceBounds;
+    }
+
+    function updateCanvasSize() {
+      dpr = Math.max(1, Math.min(maxDpr, window.devicePixelRatio || 1));
+      const rect = canvas.getBoundingClientRect();
+      const w = Math.max(1, Math.floor(rect.width));
+      const h = Math.max(1, Math.floor(rect.height));
+      const targetW = Math.floor(w * dpr);
+      const targetH = Math.floor(h * dpr);
+      if (canvas.width !== targetW || canvas.height !== targetH) {
+        canvas.width = targetW;
+        canvas.height = targetH;
+      }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return { w, h };
+    }
+
+    function buildParticles(w, h) {
+      off.width = w;
+      off.height = h;
+      offCtx.clearRect(0, 0, w, h);
+
+      const bounds = getSourceBounds();
+      const fitScale = low ? 0.86 : 0.9;
+      const fitYBias = -0.05;
+      const fit = fitContain(bounds.sw, bounds.sh, w, h, fitScale, fitYBias);
+      offCtx.drawImage(
+        sourceImg,
+        bounds.sx,
+        bounds.sy,
+        bounds.sw,
+        bounds.sh,
+        fit.dx,
+        fit.dy,
+        fit.dw,
+        fit.dh
+      );
+      const data = offCtx.getImageData(0, 0, w, h).data;
+
+      const rowGap = low ? 4 : 5;
+      const dashGap = low ? 2 : 3;
+      const baseDash = 5;
+      const scatter = Math.max(w, h) * 0.45;
+      const lines = [];
+
+      for (let y = 0; y < h; y += rowGap) {
+        let x = 0;
+        while (x < w) {
+          const idx = (y * w + x) * 4;
+          const a = data[idx + 3];
+          if (a <= alphaThreshold) {
+            x += 1;
+            continue;
+          }
+
+          // contiguous run in this row where alpha indicates subject
+          const runStart = x;
+          let runEnd = x;
+          while (runEnd < w) {
+            const j = (y * w + runEnd) * 4;
+            if (data[j + 3] <= alphaThreshold) break;
+            runEnd++;
+          }
+
+          let cursor = runStart;
+          while (cursor < runEnd) {
+            const mid = clamp(Math.floor(cursor + (runEnd - cursor) * 0.2), runStart, runEnd - 1);
+            const k = (y * w + mid) * 4;
+            const srcR = data[k];
+            const srcG = data[k + 1];
+            const srcB = data[k + 2];
+            const aa = data[k + 3] / 255;
+            const luma = (0.2126 * srcR + 0.7152 * srcG + 0.0722 * srcB) / 255;
+            const maxRGB = Math.max(srcR, srcG, srcB);
+            const minRGB = Math.min(srcR, srcG, srcB);
+            const cb = 128 - 0.168736 * srcR - 0.331264 * srcG + 0.5 * srcB;
+            const cr = 128 + 0.5 * srcR - 0.418688 * srcG - 0.081312 * srcB;
+            const isSkin = (
+              srcR > 70 && srcG > 45 && srcB > 30 &&
+              srcR > srcG + 8 && srcG > srcB + 4 &&
+              (maxRGB - minRGB) > 15 &&
+              cb > 77 && cb < 127 &&
+              cr > 133 && cr < 173
+            );
+            // Keep face details present but subtle: lighter + slightly longer dashes only on skin regions.
+            const toneMix = isSkin ? clamp((luma - 0.28) * 1.05, 0, 0.6) : 0;
+            const dashBoost = isSkin
+              ? (low ? 1 : 2) + Math.round(toneMix * (low ? 2 : 4))
+              : 0;
+            const strokeR = Math.round(mattePurpleBase.r + (mattePurpleHighlight.r - mattePurpleBase.r) * toneMix);
+            const strokeG = Math.round(mattePurpleBase.g + (mattePurpleHighlight.g - mattePurpleBase.g) * toneMix);
+            const strokeB = Math.round(mattePurpleBase.b + (mattePurpleHighlight.b - mattePurpleBase.b) * toneMix);
+            const dashLen = baseDash + dashBoost;
+            const drawLen = Math.min(dashLen, runEnd - cursor);
+
+            lines.push({
+              x: w * 0.5 + (Math.random() - 0.5) * scatter,
+              y: h * 0.5 + (Math.random() - 0.5) * scatter,
+              targetX: cursor,
+              targetY: y,
+              vx: 0,
+              vy: 0,
+              length: drawLen,
+              strokeColor: `rgb(${strokeR},${strokeG},${strokeB})`,
+              baseAlpha: clamp(0.4 + aa * 0.22 + toneMix * 0.08, 0.36, 0.84),
+              currentAlpha: 0,
+              delay: Math.random() * 0.08,
+              driftPhase: Math.random() * Math.PI * 2,
+              driftSpeed: 0.55 + Math.random() * 1.0,
+              driftAmp: 0.14 + Math.random() * 0.3
+            });
+
+            cursor += drawLen + dashGap;
+          }
+          x = runEnd + 1;
+        }
+      }
+
+      return lines;
+    }
+
+    function rebuild() {
+      const { w, h } = updateCanvasSize();
+      lastW = w;
+      lastH = h;
+      particles = buildParticles(w, h);
+      startedAt = performance.now();
+      disturbance = 0;
+    }
+
+    function draw(now) {
+      const { w, h } = updateCanvasSize();
+      if (w !== lastW || h !== lastH) {
+        rebuild();
+      }
+
+      ctx.clearRect(0, 0, w, h);
+      const elapsed = (now - startedAt) / 1000;
+      const interactive = pointer.active && !low && !reduce;
+      const maxDist = low ? 44 : 56;
+      ctx.lineWidth = low ? 1.5 : 2;
+      ctx.shadowBlur = low ? 0 : 5;
+      ctx.shadowColor = low ? 'transparent' : 'rgba(224, 88, 255, 0.55)';
+
+      if (interactive) {
+        disturbance = Math.min(1, disturbance + 0.05);
+      } else {
+        disturbance *= 0.78;
+      }
+
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        const t = elapsed - p.delay;
+        if (t < 0) continue;
+
+        const fade = Math.min(t / 0.55, 1);
+        const moveEase = 1 - Math.pow(1 - Math.min(t / 1.05, 1), 3);
+        p.currentAlpha = p.baseAlpha * (1 - Math.pow(1 - fade, 2));
+
+        if (interactive) {
+          const dxm = p.x - pointer.x;
+          const dym = p.y - pointer.y;
+          const dist = Math.hypot(dxm, dym);
+          if (dist < maxDist && dist > 0) {
+            const force = (1 - dist / maxDist) * 1.75;
+            p.vx += (dxm / dist) * force;
+            p.vy += (dym / dist) * force;
+            disturbance = Math.min(1, disturbance + 0.01);
+          }
+        }
+
+        const drift = reduce ? 0 : p.driftAmp * (disturbance * 0.06);
+        const tx = p.targetX + Math.sin(elapsed * p.driftSpeed + p.driftPhase) * drift;
+        const ty = p.targetY + Math.cos(elapsed * (p.driftSpeed * 0.82) + p.driftPhase * 1.13) * drift;
+        const dx = tx - p.x;
+        const dy = ty - p.y;
+        const pullStrength = (0.035 + moveEase * 0.16) * (1 - disturbance * 0.08);
+        p.vx += dx * pullStrength;
+        p.vy += dy * pullStrength;
+
+        // Strong damping so particles settle quickly and stay static.
+        p.vx *= 0.82;
+        p.vy *= 0.82;
+        p.x += p.vx;
+        p.y += p.vy;
+
+        // Snap to exact target when settled to remove idle jitter.
+        if (!interactive && disturbance < 0.03 &&
+          Math.abs(dx) < 0.6 && Math.abs(dy) < 0.6 &&
+          Math.abs(p.vx) < 0.08 && Math.abs(p.vy) < 0.08) {
+          p.x = p.targetX;
+          p.y = p.targetY;
+          p.vx = 0;
+          p.vy = 0;
+        }
+
+        ctx.globalAlpha = p.currentAlpha;
+        ctx.strokeStyle = p.strokeColor;
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x + p.length, p.y);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      ctx.shadowBlur = 0;
+
+      raf = requestAnimationFrame(draw);
+    }
+
+    function start() {
+      rebuild();
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(draw);
+    }
+
+    if (sourceImg.complete && sourceImg.naturalWidth) start();
+    else sourceImg.addEventListener('load', start, { once: true });
+
+    window.addEventListener('resize', () => rebuild(), { passive: true });
+
+    if (!low && !reduce) {
+      canvas.addEventListener('pointermove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        pointer.x = e.clientX - rect.left;
+        pointer.y = e.clientY - rect.top;
+        pointer.active = true;
+      }, { passive: true });
+      canvas.addEventListener('pointerleave', () => { pointer.active = false; }, { passive: true });
+    }
+  })();
+
   // Mark document ready to trigger CSS entrance animations
   try { requestAnimationFrame(() => document.documentElement.classList.add('ready')); } catch (_) {
     document.documentElement.classList.add('ready');

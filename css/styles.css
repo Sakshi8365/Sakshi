@@ -342,6 +342,24 @@ html[data-theme="light"] .bg-shimmer { opacity:.25; }
 .cta { display: flex; gap: .75rem; margin-top: 1.25rem; }
 .accent { color: var(--accent-2); }
 
+/* Hero particle silhouette canvas (no box treatment) */
+.simulation-container {
+  width: 100%;
+  max-width: 560px;
+  aspect-ratio: 4 / 5;
+  display: block;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  cursor: crosshair;
+  touch-action: pan-y;
+}
+@media (pointer: fine) { .simulation-container { touch-action: none; } }
+html[data-perf="low"] .simulation-container { cursor: default; }
+@media (prefers-reduced-motion: reduce) { .simulation-container { cursor: default; } }
+
 /* Animated accent text (subtle gradient shift) */
 .accent-animated {
   background: linear-gradient(90deg, #a78bfa, #7c5cff, #2dd4bf);
@@ -447,34 +465,26 @@ html[data-theme="light"] .project-card::before { mix-blend-mode: overlay; }
 .tags li { padding: .25rem .5rem; border: 1px solid var(--border); border-radius: .5rem; font-size: .85rem; color: var(--muted); }
 
 /* About */
-.about-grid { display: grid; gap: 1rem; grid-template-columns: 1fr; }
-@media (min-width: 800px) { .about-grid { grid-template-columns: 2fr 1fr; } }
+.about-grid { display: grid; gap: 1rem; grid-template-columns: 1fr; align-items: start; }
+@media (min-width: 800px) {
+  .about-grid { grid-template-columns: 1.35fr 1fr; align-items: start; }
+}
+@media (min-width: 1100px) {
+  .about-grid { grid-template-columns: 1.25fr 1fr; }
+}
 
 /* About photo styles */
-.about-photo { align-self: start; position: relative; perspective: 1000px; --rx: 0deg; --ry: 0deg; --mx: 50%; --my: 50%; }
-.about-photo img { width: 100%; height: auto; display: block; border-radius: 1rem; border: 1px solid var(--border); box-shadow: 0 25px 60px rgba(0,0,0,.35); background: color-mix(in oklab, var(--bg) 75%, var(--accent) 25%); object-fit: cover; aspect-ratio: 4/5; transform: rotateX(var(--rx)) rotateY(var(--ry)) translateZ(0); transition: transform .2s ease-out, box-shadow .25s ease; will-change: transform; }
+.about-photo { align-self: start; justify-self: center; width: min(560px, 100%); position: relative; perspective: 1000px; --rx: 0deg; --ry: 0deg; --mx: 50%; --my: 50%; }
+
+@media (min-width: 800px) { .about-photo { justify-self: end; } }
+.about-photo > img { width: 100%; height: auto; display: block; border-radius: 1rem; border: 0; box-shadow: none; background: transparent; object-fit: cover; aspect-ratio: 4/5; transform: rotateX(var(--rx)) rotateY(var(--ry)) translateZ(0); transition: transform .2s ease-out, box-shadow .25s ease; will-change: transform; }
+.about-photo-source { display: none !important; }
+.about-photo .photo-simulation { border-radius: 1rem; }
 /* Optional: make photo perfectly round by adding class .round to .about-photo */
 .about-photo.round img { border-radius: 50%; aspect-ratio: 1 / 1; }
-@media (prefers-reduced-motion: no-preference) {
-  .about-photo::before {
-    content: ""; position: absolute; inset: -4%; z-index: -1; border-radius: 1.3rem;
-    background: radial-gradient(60% 50% at 50% 40%, color-mix(in oklab, var(--accent) 65%, transparent) 0%, transparent 60%);
-    filter: blur(16px); opacity: .55;
-  }
-  /* glossy shine following cursor */
-  .about-photo::after {
-    content: ""; position: absolute; inset: 0; border-radius: 1rem; pointer-events: none;
-    background-image:
-      radial-gradient(500px 300px at var(--mx) var(--my), rgba(255,255,255,.20), rgba(255,255,255,0) 60%),
-      linear-gradient(110deg, rgba(255,255,255,0) 42%, rgba(255,255,255,.25) 49%, rgba(255,255,255,.08) 53%, rgba(255,255,255,0) 60%);
-    background-size: auto, 200% 100%;
-    background-position: var(--mx) var(--my), -60% 50%;
-    opacity: 0; transition: opacity .25s ease;
-  }
-  .about-photo:hover::after { opacity: .16; animation: photoSheen 1.1s ease-out; }
-  @keyframes photoSheen {
-    to { background-position: var(--mx) var(--my), 120% 50%; }
-  }
+.about-photo::before,
+.about-photo::after {
+  content: none !important;
 }
 
 .skills-block { margin-top: 1.25rem; }
@@ -502,3 +512,6 @@ html[data-theme="light"] .project-card::before { mix-blend-mode: overlay; }
 .exp-dates { color: var(--muted); font-weight: 500; }
 .exp-desc { margin: .55rem 0 .45rem; color: var(--muted); font-size: .92rem; line-height: 1.5; }
 .exp-tags { margin-top: .25rem; }
+
+
+
