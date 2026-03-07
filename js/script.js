@@ -319,8 +319,8 @@
     const maxDpr = low ? 1.25 : 2;
     const alphaThreshold = 2; // keep almost all edge pixels
     const boundsAlphaThreshold = 20; // stricter threshold for trimming transparent borders
-    const mattePurpleBase = { r: 224, g: 88, b: 255 };
-    const mattePurpleHighlight = { r: 255, g: 232, b: 255 };
+    const mattePurpleBase = { r: 208, g: 230, b: 255 };
+    const mattePurpleHighlight = { r: 255, g: 255, b: 255 };
 
     const sourceEl = document.querySelector('.about-photo-source');
     const sourceSrc = sourceEl ? (sourceEl.currentSrc || sourceEl.getAttribute('src') || '') : '';
@@ -496,7 +496,7 @@
               cr > 133 && cr < 173
             );
             // Keep face details present but subtle: lighter + slightly longer dashes only on skin regions.
-            const toneMix = isSkin ? clamp((luma - 0.28) * 1.05, 0, 0.6) : 0;
+            const toneMix = isSkin ? clamp((luma - 0.16) * 2.0, 0, 1) : 0;
             const dashBoost = isSkin
               ? (low ? 1 : 2) + Math.round(toneMix * (low ? 2 : 4))
               : 0;
@@ -515,7 +515,7 @@
               vy: 0,
               length: drawLen,
               strokeColor: `rgb(${strokeR},${strokeG},${strokeB})`,
-              baseAlpha: clamp(0.4 + aa * 0.22 + toneMix * 0.08, 0.36, 0.84),
+              baseAlpha: clamp(0.40 + aa * 0.22 + toneMix * 0.08, 0.34, 0.88),
               currentAlpha: 0,
               delay: Math.random() * 0.08,
               driftPhase: Math.random() * Math.PI * 2,
@@ -552,8 +552,8 @@
       const interactive = pointer.active && !low && !reduce;
       const maxDist = low ? 44 : 56;
       ctx.lineWidth = low ? 1.5 : 2;
-      ctx.shadowBlur = low ? 0 : 5;
-      ctx.shadowColor = low ? 'transparent' : 'rgba(224, 88, 255, 0.55)';
+      ctx.shadowBlur = low ? 0 : 12;
+      ctx.shadowColor = low ? 'transparent' : 'rgba(210, 236, 255, 0.78)';
 
       if (interactive) {
         disturbance = Math.min(1, disturbance + 0.05);
