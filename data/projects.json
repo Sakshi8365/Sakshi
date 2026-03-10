@@ -1,4 +1,9 @@
 [ {
+    "title": "AI-Messaging-Automation-Platform",
+    "description": "About Event-driven AI messaging automation platform that detects incoming WhatsApp messages and generates context-aware auto-replies using asynchronous workers and queue-based processing.",
+    "tech": ["Python", "Selenium", "FastAPI", "Redis", "PostgreSQL", "Docker"],
+    "source": "https://github.com/Sakshi8365/AI-Messaging-Automation-Platform"
+  },{
     "title": "FocusBuddy",
     "description": "Focus Buddy is an ADHD-focused, gamified productivity web app built with FastAPI.It combines mission-based focus sessions, ADHD support tools, and parent supervision features with PIN-protected reporting.",
     "tech": ["FastAPI", "Python", "SQLAlchemy", "SQLite", "JavaScript"],
@@ -26,14 +31,7 @@
     "description": "Data Masker is a fast, configurable CLI that detects and masks PII",
     "tech": ["Python", "Pandas", "Click", "PyYAML", "Regex", "ipaddress"],
     "source": "https://github.com/Sakshi8365/Data-Masker-Smart-Data-Redactor"
-  },
-  {
-    "title": "Toxicity-Detection-Discord-Bot",
-    "description": "Real-time Discord toxicity detection bot using ML/NLP with configurable thresholds and admin controls for fast, accurate moderation.",
-    "tech": ["Python", "Discord.py", "Scikit-learn", "TF-IDF", "Logistic Regression", "JSON Config"],
-    "source": "https://github.com/Sakshi8365/Toxicity-Detection-Discord-Bot"
   }
- 
   
   
 
