@@ -1,52 +1,103 @@
-# Portfolio
+# Sakshi Tiwari — Portfolio
 
-A fast, responsive, and accessible personal portfolio. Built with plain HTML, CSS, and JavaScript—easy to customize and deploy anywhere.
+[![Deploy to GitHub Pages](https://github.com/Sakshi8365/Sakshi/actions/workflows/pages.yml/badge.svg)](https://github.com/Sakshi8365/Sakshi/actions/workflows/pages.yml)
+
+Live site: https://sakshi8365.github.io/Sakshi/
+
+A fast, responsive, and accessible portfolio built with plain **HTML, CSS, and JavaScript**.
+Projects are rendered from a simple JSON file, so adding new work is quick and doesn’t require a build step.
+
+![Portfolio preview](assets/og-image.jpg)
+
+## Highlights
+
+- **Responsive + accessible**: keyboard-friendly navigation, skip link, and readable contrast.
+- **Data-driven projects**: cards are generated from `data/projects.json`.
+- **Light/Dark theme**: preference stored in `localStorage` with a one-click toggle.
+- **Performance-friendly effects**: automatically reduces heavy visual effects on low-power devices / reduced-motion settings.
+- **Zero-build**: no framework, no bundler — deploy as static files.
+
+## Tech stack
+
+- HTML5
+- CSS (CSS variables + modern responsive layout)
+- Vanilla JavaScript (fetch + progressive enhancement)
+- GitHub Pages (via GitHub Actions)
+
+## Project structure
+
+```text
+.
+├─ index.html              # Page structure + SEO meta
+├─ css/
+│  └─ styles.css           # Theme + layout
+├─ js/
+│  └─ script.js            # Theme + projects rendering + effects
+├─ data/
+│  └─ projects.json        # Projects content
+└─ assets/                 # Images + resume
+```
 
 ## Customize
 
-- index.html
-  - Replace "Your Name" and bio text in the hero.
-  - Update social links and email in the Contact section.
-  - Set correct URLs for `og:url` and `og:image` in the `<head>`.
-  - Swap the Resume link to your actual PDF or page.
-- data/projects.json
-  - Add/update your projects. Fields: `title`, `description`, `tech` (array), optional `live`, optional `source`.
-- Favicon
-  - The favicon currently uses `assets/og-image.jpg` (see `<head>` in `index.html`). Replace that file or update the `<link rel="icon">` tag.
-- css/styles.css
-  - Adjust colors, spacing, and typography via CSS variables.
+### Update projects
 
-## Dark mode
+Edit `data/projects.json`.
 
-Theme is stored in `localStorage` and respects user preference when set to `auto`. The toggle switches between light and dark.
+Supported fields:
 
-## Preview locally (Windows / PowerShell)
+- `title` (string)
+- `description` (string)
+- `tech` (array of strings)
+- `source` (optional URL)
 
-This is a static site. You can open `index.html` directly in a browser, but for fetch requests (projects.json) to work consistently, use a local server.
+### Update profile content
 
-Option A: Python (if installed)
+Edit `index.html`:
+
+- Hero text, “About”, Experience, socials
+- SEO / social preview meta (`og:url`, `og:image`, etc.)
+- Resume link (`assets/resume.pdf`)
+
+### Update styling
+
+Edit `css/styles.css`:
+
+- Colors + theme variables
+- Spacing + typography
+- Component styling (cards, buttons, layout)
+
+## Run locally
+
+Because the Projects section loads JSON using `fetch`, use a local server (opening via `file://` will block requests in many browsers).
+
+### Option A: Python
 
 ```pwsh
 python -m http.server 5173
 ```
 
-Then visit http://localhost:5173
+Open http://localhost:5173
 
-Option B: Node (if installed)
+### Option B: Node
 
 ```pwsh
 npx serve -p 5173
 ```
 
-Option C: VS Code Live Server extension
+### Option C: VS Code Live Server
 
-- Install "Live Server" extension
-- Right-click `index.html` → Open with Live Server
+- Install the **Live Server** extension
+- Right-click `index.html` → **Open with Live Server**
 
 ## Deploy
 
-- GitHub Pages: push this folder and enable Pages (root or `/docs`).
-- Netlify / Vercel: import the repo and deploy as a static site.
+This repo includes a GitHub Actions workflow that deploys to GitHub Pages on every push to `main`.
+
+In GitHub:
+
+1. Repository → **Settings** → **Pages**
+2. Set **Source** to **GitHub Actions**
 
 ## License
 
