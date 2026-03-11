@@ -7,7 +7,7 @@ Live site: https://sakshi8365.github.io/Sakshi/
 A fast, responsive, and accessible portfolio built with plain **HTML, CSS, and JavaScript**.
 Projects are rendered from a simple JSON file, so adding new work is quick and doesn’t require a build step.
 
-![Portfolio preview](assets/WhatsApp_Image_2026-03-11_at_04.52.34-removebg-preview.png)
+![Portfolio preview](<assets/Screenshot 2026-03-11 100017.png>)
 
 ## Highlights
 
