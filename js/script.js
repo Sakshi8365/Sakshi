@@ -317,7 +317,7 @@
     const low = perf.low;
     const reduce = perf.reduceMotion;
     const maxDpr = low ? 1.25 : 2;
-    const particleSourceUrl = 'data/vizo-particles.html';
+    const particleSourceUrl = 'data/AsciiParticles.jsx';
     const defaultConfig = {
       sensitivity: 97,
       elasticity: 0.1,
@@ -415,10 +415,23 @@
 
     function paletteColor(point) {
       const t = clamp(point.br / 255, 0, 1);
-      const blend = Math.pow(t, 0.8);
-      const base = mixRgb(sitePalette.accent, sitePalette.accent2, blend);
-      const color = mixRgb(base, sitePalette.highlight, Math.max(0, t - 0.58) * 0.6);
-      return `rgb(${color.r},${color.g},${color.b})`;
+
+      if (config.palette === 'matrix') {
+        return `rgb(0,${Math.round(80 + t * 175)},0)`;
+      }
+
+      if (config.palette === 'sampled') {
+        return `rgb(${point.r},${point.g},${point.b})`;
+      }
+
+      if (config.palette === 'white') {
+        const lift = Math.pow(t, 0.76);
+        const value = Math.round(138 + lift * 117);
+        const alpha = (0.56 + Math.pow(t, 0.98) * 0.44).toFixed(3);
+        return `rgba(${value},${value},${Math.min(255, value + 10)},${alpha})`;
+      }
+
+      return `rgb(${Math.round(20 + t * 80)},${Math.round(80 + t * 175)},${Math.round(70 + t * 148)})`;
     }
 
     function parseConfig(source) {
@@ -436,7 +449,7 @@
     }
 
     function parsePortraitSource(source) {
-      const rawMatch = source.match(/var\s+raw\s*=\s*(\[[\s\S]*?\]);/);
+      const rawMatch = source.match(/(?:var\s+raw|const\s+PARTICLES)\s*=\s*(\[[\s\S]*?\])\s*(?:;|\n|$)/);
       if (!rawMatch) return null;
 
       const raw = JSON.parse(rawMatch[1]);
