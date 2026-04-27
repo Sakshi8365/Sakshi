@@ -306,7 +306,7 @@
     tick();
   })();
 
-  // About canvas: particle lines from your photo (shape + original colors)
+  // About canvas: Vizo ASCII particle portrait
   (function initPhotoParticleSilhouette() {
     const canvas = document.querySelector('.photo-simulation');
     if (!canvas) return;
@@ -317,100 +317,85 @@
     const low = perf.low;
     const reduce = perf.reduceMotion;
     const maxDpr = low ? 1.25 : 2;
-    const alphaThreshold = 2; // keep almost all edge pixels
-    const boundsAlphaThreshold = 20; // stricter threshold for trimming transparent borders
-    const mattePurpleBase = { r: 208, g: 230, b: 255 };
-    const mattePurpleHighlight = { r: 255, g: 255, b: 255 };
-
-    const sourceEl = document.querySelector('.about-photo-source');
-    const sourceSrc = sourceEl ? (sourceEl.currentSrc || sourceEl.getAttribute('src') || '') : '';
-    const sourceImg = sourceSrc ? new Image() : null;
-    if (!sourceImg) return;
-    sourceImg.decoding = 'async';
-    sourceImg.src = sourceSrc;
-
-    const off = document.createElement('canvas');
-    const offCtx = off.getContext('2d', { alpha: true, willReadFrequently: true });
-    if (!offCtx) return;
+    const particleSourceUrl = 'data/vizo-particles.html';
+    const defaultConfig = {
+      sensitivity: 97,
+      elasticity: 0.1,
+      friction: 0.93,
+      palette: 'teal'
+    };
 
     let dpr = 1;
     let raf = null;
-    let startedAt = 0;
     let lastW = 0;
     let lastH = 0;
+    let renderScale = 1;
+    let fontSize = 11;
+    let interactionRadius = defaultConfig.sensitivity;
+    let portrait = null;
+    let config = { ...defaultConfig };
+    let sitePalette = null;
     let particles = [];
-    let sourceBounds = null;
-    let disturbance = 0;
-    const pointer = { x: -1000, y: -1000, active: false };
+    const pointer = { x: -9999, y: -9999, active: false };
 
     const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-    const fitContain = (sw, sh, tw, th, fill = 1.03, yBias = 0.58) => {
-      const scale = Math.min((tw * fill) / sw, (th * fill) / sh);
-      const dw = sw * scale;
-      const dh = sh * scale;
-      return { dx: (tw - dw) * 0.5, dy: (th - dh) * yBias, dw, dh };
-    };
 
-    function getSourceBounds() {
-      if (sourceBounds) return sourceBounds;
+    function parseCssColor(value, fallback) {
+      const input = String(value || '').trim();
+      if (!input) return fallback;
 
-      const sw = sourceImg.naturalWidth || 0;
-      const sh = sourceImg.naturalHeight || 0;
-      if (!sw || !sh) {
-        sourceBounds = { sx: 0, sy: 0, sw: Math.max(1, sw), sh: Math.max(1, sh) };
-        return sourceBounds;
-      }
-
-      const probe = document.createElement('canvas');
-      const probeCtx = probe.getContext('2d', { alpha: true, willReadFrequently: true });
-      if (!probeCtx) {
-        sourceBounds = { sx: 0, sy: 0, sw, sh };
-        return sourceBounds;
-      }
-
-      probe.width = sw;
-      probe.height = sh;
-      probeCtx.clearRect(0, 0, sw, sh);
-      probeCtx.drawImage(sourceImg, 0, 0, sw, sh);
-
-      const px = probeCtx.getImageData(0, 0, sw, sh).data;
-      const rowCounts = new Uint32Array(sh);
-      const colCounts = new Uint32Array(sw);
-
-      for (let y = 0; y < sh; y++) {
-        for (let x = 0; x < sw; x++) {
-          const a = px[(y * sw + x) * 4 + 3];
-          if (a > boundsAlphaThreshold) {
-            rowCounts[y]++;
-            colCounts[x]++;
-          }
+      if (input.startsWith('#')) {
+        const hex = input.slice(1);
+        if (hex.length === 3) {
+          return {
+            r: parseInt(hex[0] + hex[0], 16),
+            g: parseInt(hex[1] + hex[1], 16),
+            b: parseInt(hex[2] + hex[2], 16)
+          };
+        }
+        if (hex.length === 6) {
+          return {
+            r: parseInt(hex.slice(0, 2), 16),
+            g: parseInt(hex.slice(2, 4), 16),
+            b: parseInt(hex.slice(4, 6), 16)
+          };
         }
       }
 
-      const minRowPixels = Math.max(1, Math.floor(sw * 0.01));
-      const minColPixels = Math.max(1, Math.floor(sh * 0.01));
-
-      let minY = 0;
-      while (minY < sh && rowCounts[minY] < minRowPixels) minY++;
-      let maxY = sh - 1;
-      while (maxY >= 0 && rowCounts[maxY] < minRowPixels) maxY--;
-
-      let minX = 0;
-      while (minX < sw && colCounts[minX] < minColPixels) minX++;
-      let maxX = sw - 1;
-      while (maxX >= 0 && colCounts[maxX] < minColPixels) maxX--;
-
-      if (maxX < minX || maxY < minY) {
-        sourceBounds = { sx: 0, sy: 0, sw, sh };
-      } else {
-        sourceBounds = {
-          sx: minX,
-          sy: minY,
-          sw: maxX - minX + 1,
-          sh: maxY - minY + 1
-        };
+      const rgbMatch = input.match(/rgba?\(([^)]+)\)/i);
+      if (rgbMatch) {
+        const parts = rgbMatch[1].split(',').map((part) => Number(part.trim()));
+        if (parts.length >= 3 && parts.every((part, index) => index > 2 || Number.isFinite(part))) {
+          return {
+            r: clamp(Math.round(parts[0]), 0, 255),
+            g: clamp(Math.round(parts[1]), 0, 255),
+            b: clamp(Math.round(parts[2]), 0, 255)
+          };
+        }
       }
-      return sourceBounds;
+
+      return fallback;
+    }
+
+    function mixRgb(a, b, t) {
+      return {
+        r: Math.round(a.r + (b.r - a.r) * t),
+        g: Math.round(a.g + (b.g - a.g) * t),
+        b: Math.round(a.b + (b.b - a.b) * t)
+      };
+    }
+
+    function getSitePalette() {
+      const styles = getComputedStyle(document.documentElement);
+      const accent = parseCssColor(styles.getPropertyValue('--accent'), { r: 124, g: 92, b: 255 });
+      const accent2 = parseCssColor(styles.getPropertyValue('--accent-2'), { r: 45, g: 212, b: 191 });
+      const text = parseCssColor(styles.getPropertyValue('--text'), { r: 230, g: 232, b: 239 });
+
+      return {
+        accent,
+        accent2,
+        highlight: mixRgb(accent2, text, 0.55)
+      };
     }
 
     function updateCanvasSize() {
@@ -428,108 +413,92 @@
       return { w, h };
     }
 
-    function buildParticles(w, h) {
-      off.width = w;
-      off.height = h;
-      offCtx.clearRect(0, 0, w, h);
+    function paletteColor(point) {
+      const t = clamp(point.br / 255, 0, 1);
+      const blend = Math.pow(t, 0.8);
+      const base = mixRgb(sitePalette.accent, sitePalette.accent2, blend);
+      const color = mixRgb(base, sitePalette.highlight, Math.max(0, t - 0.58) * 0.6);
+      return `rgb(${color.r},${color.g},${color.b})`;
+    }
 
-      const bounds = getSourceBounds();
-      const fitScale = low ? 0.86 : 0.9;
-      const fitYBias = -0.05;
-      const fit = fitContain(bounds.sw, bounds.sh, w, h, fitScale, fitYBias);
-      offCtx.drawImage(
-        sourceImg,
-        bounds.sx,
-        bounds.sy,
-        bounds.sw,
-        bounds.sh,
-        fit.dx,
-        fit.dy,
-        fit.dw,
-        fit.dh
-      );
-      const data = offCtx.getImageData(0, 0, w, h).data;
+    function parseConfig(source) {
+      const parsed = { ...defaultConfig };
+      const sensitivity = source.match(/sensitivity:\s*([0-9.]+)/);
+      const elasticity = source.match(/elasticity:\s*([0-9.]+)/);
+      const friction = source.match(/friction:\s*([0-9.]+)/);
+      const palette = source.match(/palette:\s*'([^']+)'/);
 
-      const rowGap = low ? 4 : 5;
-      const dashGap = low ? 2 : 3;
-      const baseDash = 5;
-      const scatter = Math.max(w, h) * 0.45;
-      const lines = [];
+      if (sensitivity) parsed.sensitivity = Number(sensitivity[1]) || parsed.sensitivity;
+      if (elasticity) parsed.elasticity = Number(elasticity[1]) || parsed.elasticity;
+      if (friction) parsed.friction = Number(friction[1]) || parsed.friction;
+      if (palette) parsed.palette = palette[1] || parsed.palette;
+      return parsed;
+    }
 
-      for (let y = 0; y < h; y += rowGap) {
-        let x = 0;
-        while (x < w) {
-          const idx = (y * w + x) * 4;
-          const a = data[idx + 3];
-          if (a <= alphaThreshold) {
-            x += 1;
-            continue;
-          }
+    function parsePortraitSource(source) {
+      const rawMatch = source.match(/var\s+raw\s*=\s*(\[[\s\S]*?\]);/);
+      if (!rawMatch) return null;
 
-          // contiguous run in this row where alpha indicates subject
-          const runStart = x;
-          let runEnd = x;
-          while (runEnd < w) {
-            const j = (y * w + runEnd) * 4;
-            if (data[j + 3] <= alphaThreshold) break;
-            runEnd++;
-          }
+      const raw = JSON.parse(rawMatch[1]);
+      if (!Array.isArray(raw) || !raw.length) return null;
 
-          let cursor = runStart;
-          while (cursor < runEnd) {
-            const mid = clamp(Math.floor(cursor + (runEnd - cursor) * 0.2), runStart, runEnd - 1);
-            const k = (y * w + mid) * 4;
-            const srcR = data[k];
-            const srcG = data[k + 1];
-            const srcB = data[k + 2];
-            const aa = data[k + 3] / 255;
-            const luma = (0.2126 * srcR + 0.7152 * srcG + 0.0722 * srcB) / 255;
-            const maxRGB = Math.max(srcR, srcG, srcB);
-            const minRGB = Math.min(srcR, srcG, srcB);
-            const cb = 128 - 0.168736 * srcR - 0.331264 * srcG + 0.5 * srcB;
-            const cr = 128 + 0.5 * srcR - 0.418688 * srcG - 0.081312 * srcB;
-            const isSkin = (
-              srcR > 70 && srcG > 45 && srcB > 30 &&
-              srcR > srcG + 8 && srcG > srcB + 4 &&
-              (maxRGB - minRGB) > 15 &&
-              cb > 77 && cb < 127 &&
-              cr > 133 && cr < 173
-            );
-            // Keep face details present but subtle: lighter + slightly longer dashes only on skin regions.
-            const toneMix = isSkin ? clamp((luma - 0.16) * 2.0, 0, 1) : 0;
-            const dashBoost = isSkin
-              ? (low ? 1 : 2) + Math.round(toneMix * (low ? 2 : 4))
-              : 0;
-            const strokeR = Math.round(mattePurpleBase.r + (mattePurpleHighlight.r - mattePurpleBase.r) * toneMix);
-            const strokeG = Math.round(mattePurpleBase.g + (mattePurpleHighlight.g - mattePurpleBase.g) * toneMix);
-            const strokeB = Math.round(mattePurpleBase.b + (mattePurpleHighlight.b - mattePurpleBase.b) * toneMix);
-            const dashLen = baseDash + dashBoost;
-            const drawLen = Math.min(dashLen, runEnd - cursor);
+      let minX = Infinity;
+      let maxX = -Infinity;
+      let minY = Infinity;
+      let maxY = -Infinity;
 
-            lines.push({
-              x: w * 0.5 + (Math.random() - 0.5) * scatter,
-              y: h * 0.5 + (Math.random() - 0.5) * scatter,
-              targetX: cursor,
-              targetY: y,
-              vx: 0,
-              vy: 0,
-              length: drawLen,
-              strokeColor: `rgb(${strokeR},${strokeG},${strokeB})`,
-              baseAlpha: clamp(0.40 + aa * 0.22 + toneMix * 0.08, 0.34, 0.88),
-              currentAlpha: 0,
-              delay: Math.random() * 0.08,
-              driftPhase: Math.random() * Math.PI * 2,
-              driftSpeed: 0.55 + Math.random() * 1.0,
-              driftAmp: 0.14 + Math.random() * 0.3
-            });
-
-            cursor += drawLen + dashGap;
-          }
-          x = runEnd + 1;
-        }
+      for (let i = 0; i < raw.length; i++) {
+        const point = raw[i];
+        minX = Math.min(minX, point.ox);
+        maxX = Math.max(maxX, point.ox);
+        minY = Math.min(minY, point.oy);
+        maxY = Math.max(maxY, point.oy);
       }
 
-      return lines;
+      return {
+        minX,
+        minY,
+        width: Math.max(1, maxX - minX),
+        height: Math.max(1, maxY - minY),
+        points: raw
+      };
+    }
+
+    function buildParticles(w, h) {
+      if (!portrait || !portrait.points.length) return [];
+      sitePalette = getSitePalette();
+
+      const scaleX = (w * (low ? 0.84 : 0.9)) / portrait.width;
+      const scaleY = (h * (low ? 0.9 : 0.94)) / portrait.height;
+      renderScale = Math.max(0.01, Math.min(scaleX, scaleY));
+      fontSize = Math.max(5, 11 * renderScale);
+      interactionRadius = config.sensitivity * renderScale;
+
+      const drawWidth = portrait.width * renderScale;
+      const drawHeight = portrait.height * renderScale;
+      const offsetX = (w - drawWidth) * 0.5 - portrait.minX * renderScale;
+      const offsetY = (h - drawHeight) * 0.5 - portrait.minY * renderScale;
+      const step = low ? 2 : 1;
+      const nextParticles = [];
+
+      for (let i = 0; i < portrait.points.length; i += step) {
+        const point = portrait.points[i];
+        const targetX = offsetX + point.ox * renderScale;
+        const targetY = offsetY + point.oy * renderScale;
+
+        nextParticles.push({
+          x: reduce ? targetX : Math.random() * w,
+          y: reduce ? targetY : Math.random() * h,
+          vx: 0,
+          vy: 0,
+          targetX,
+          targetY,
+          char: point.c || '*',
+          color: paletteColor(point)
+        });
+      }
+
+      return nextParticles;
     }
 
     function rebuild() {
@@ -537,99 +506,90 @@
       lastW = w;
       lastH = h;
       particles = buildParticles(w, h);
-      startedAt = performance.now();
-      disturbance = 0;
     }
 
-    function draw(now) {
+    function draw() {
       const { w, h } = updateCanvasSize();
-      if (w !== lastW || h !== lastH) {
-        rebuild();
-      }
+      if (w !== lastW || h !== lastH) rebuild();
 
       ctx.clearRect(0, 0, w, h);
-      const elapsed = (now - startedAt) / 1000;
-      const interactive = pointer.active && !low && !reduce;
-      const maxDist = low ? 44 : 56;
-      ctx.lineWidth = low ? 1.5 : 2;
-      ctx.shadowBlur = low ? 0 : 12;
-      ctx.shadowColor = low ? 'transparent' : 'rgba(210, 236, 255, 0.78)';
-
-      if (interactive) {
-        disturbance = Math.min(1, disturbance + 0.05);
-      } else {
-        disturbance *= 0.78;
+      if (!particles.length) {
+        if (!reduce) raf = requestAnimationFrame(draw);
+        return;
       }
 
+      ctx.font = `${fontSize}px "Courier New", monospace`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      const radiusSq = interactionRadius * interactionRadius;
       for (let i = 0; i < particles.length; i++) {
-        const p = particles[i];
-        const t = elapsed - p.delay;
-        if (t < 0) continue;
+        const particle = particles[i];
 
-        const fade = Math.min(t / 0.55, 1);
-        const moveEase = 1 - Math.pow(1 - Math.min(t / 1.05, 1), 3);
-        p.currentAlpha = p.baseAlpha * (1 - Math.pow(1 - fade, 2));
+        if (!reduce) {
+          const dx = pointer.x - particle.x;
+          const dy = pointer.y - particle.y;
+          const distanceSq = dx * dx + dy * dy;
 
-        if (interactive) {
-          const dxm = p.x - pointer.x;
-          const dym = p.y - pointer.y;
-          const dist = Math.hypot(dxm, dym);
-          if (dist < maxDist && dist > 0) {
-            const force = (1 - dist / maxDist) * 1.75;
-            p.vx += (dxm / dist) * force;
-            p.vy += (dym / dist) * force;
-            disturbance = Math.min(1, disturbance + 0.01);
+          if (pointer.active && distanceSq < radiusSq && distanceSq > 0.01) {
+            const distance = Math.sqrt(distanceSq);
+            const force = (interactionRadius - distance) / interactionRadius;
+            particle.vx -= (dx / distance) * force * 8;
+            particle.vy -= (dy / distance) * force * 8;
           }
+
+          particle.vx += (particle.targetX - particle.x) * config.elasticity;
+          particle.vy += (particle.targetY - particle.y) * config.elasticity;
+          particle.vx *= config.friction;
+          particle.vy *= config.friction;
+          particle.x += particle.vx;
+          particle.y += particle.vy;
         }
 
-        const drift = reduce ? 0 : p.driftAmp * (disturbance * 0.06);
-        const tx = p.targetX + Math.sin(elapsed * p.driftSpeed + p.driftPhase) * drift;
-        const ty = p.targetY + Math.cos(elapsed * (p.driftSpeed * 0.82) + p.driftPhase * 1.13) * drift;
-        const dx = tx - p.x;
-        const dy = ty - p.y;
-        const pullStrength = (0.035 + moveEase * 0.16) * (1 - disturbance * 0.08);
-        p.vx += dx * pullStrength;
-        p.vy += dy * pullStrength;
-
-        // Strong damping so particles settle quickly and stay static.
-        p.vx *= 0.82;
-        p.vy *= 0.82;
-        p.x += p.vx;
-        p.y += p.vy;
-
-        // Snap to exact target when settled to remove idle jitter.
-        if (!interactive && disturbance < 0.03 &&
-          Math.abs(dx) < 0.6 && Math.abs(dy) < 0.6 &&
-          Math.abs(p.vx) < 0.08 && Math.abs(p.vy) < 0.08) {
-          p.x = p.targetX;
-          p.y = p.targetY;
-          p.vx = 0;
-          p.vy = 0;
-        }
-
-        ctx.globalAlpha = p.currentAlpha;
-        ctx.strokeStyle = p.strokeColor;
-        ctx.beginPath();
-        ctx.moveTo(p.x, p.y);
-        ctx.lineTo(p.x + p.length, p.y);
-        ctx.stroke();
+        ctx.fillStyle = particle.color;
+        ctx.fillText(particle.char, particle.x, particle.y);
       }
-      ctx.globalAlpha = 1;
-      ctx.shadowBlur = 0;
 
-      raf = requestAnimationFrame(draw);
+      if (!reduce) raf = requestAnimationFrame(draw);
     }
 
     function start() {
       rebuild();
       if (raf) cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(draw);
+      if (reduce) draw();
+      else raf = requestAnimationFrame(draw);
     }
 
-    if (sourceImg.complete && sourceImg.naturalWidth) start();
-    else sourceImg.addEventListener('load', start, { once: true });
+    fetch(particleSourceUrl)
+      .then((response) => {
+        if (!response.ok) throw new Error(`Failed to load ${particleSourceUrl}`);
+        return response.text();
+      })
+      .then((source) => {
+        config = parseConfig(source);
+        portrait = parsePortraitSource(source);
+        if (!portrait) throw new Error('Invalid particle source');
+        start();
+      })
+      .catch(() => {
+        particles = [];
+      });
 
-    window.addEventListener('resize', () => rebuild(), { passive: true });
+    window.addEventListener('resize', () => {
+      if (!portrait) return;
+      rebuild();
+      if (reduce) draw();
+    }, { passive: true });
+
+    const themeObserver = new MutationObserver(() => {
+      if (!portrait) return;
+      rebuild();
+      if (reduce) draw();
+    });
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme']
+    });
 
     if (!low && !reduce) {
       canvas.addEventListener('pointermove', (e) => {
@@ -638,7 +598,11 @@
         pointer.y = e.clientY - rect.top;
         pointer.active = true;
       }, { passive: true });
-      canvas.addEventListener('pointerleave', () => { pointer.active = false; }, { passive: true });
+      canvas.addEventListener('pointerleave', () => {
+        pointer.x = -9999;
+        pointer.y = -9999;
+        pointer.active = false;
+      }, { passive: true });
     }
   })();
 
